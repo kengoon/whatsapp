@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "whatsapp"
+version = "0.1.0"
+description = ""
+authors = ["Kenechukwu Akubue <kengoon19@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+pydantic = {extras = ["email-validators"], version = "^2.10.5"}
+email-validator = "^2.2.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
