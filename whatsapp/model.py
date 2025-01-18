@@ -1,21 +1,29 @@
 from datetime import datetime
 from typing import Optional, Any
-from json import dumps
 from pydantic import BaseModel, Field, EmailStr, field_validator
-from pydantic_core.core_schema import ValidatorFunctionWrapHandler
 
 
 class WhatsappConfig(BaseModel):
     token: str = Field(description="Token for WhatsApp cloud API")
-    phone_number_id: dict[str, str] = Field(description="A dict of phone numbers and IDs")
+    phone_number_id: str = Field(description="phone numbers ID")
     verify_token: str = Field(description="Your whatsapp api verify token")
     version: str = Field(default="latest", description="Whatsapp API version")
 
 
+class MessageResponseContact(BaseModel):
+    input: str
+    wa_id: str
+
+
+class MessageResponseMessage(BaseModel):
+    id: str
+
+
 class MessageResponse(BaseModel):
-    success: bool
-    error: Optional[str] = None
-    data: Optional[dict[str, Any]] = None
+    messaging_product: Optional[str] = Field(default=None)
+    contacts: Optional[MessageResponseContact] = Field(default=None)
+    messages: Optional[MessageResponseMessage] = Field(default=None)
+    success: Optional[bool] = Field(default=None)
 
 
 class ContactAddress(BaseModel):
@@ -74,8 +82,8 @@ class Contact(BaseModel):
     phones: Optional[list[ContactPhone]] = Field(description="Contact's phone number.")
     urls: Optional[list[ContactUrl]] = Field(description="Website URL associated with the contact or their company")
 
-    @field_validator("birthday", mode="wrap")
-    def birthday_yyyy_mm_dd_validator(cls, value: str, handler: ValidatorFunctionWrapHandler) -> str:
+    @field_validator("birthday")
+    def birthday_yyyy_mm_dd_validator(cls, value: str) -> str:
         try:
             datetime.strptime(value, "%Y-%m-%d")
         except ValueError as e:
@@ -95,21 +103,55 @@ class MessageTypeProperties(BaseModel):
     caption: Optional[str] = Field(default=None, description="Whatsapp media caption")
     filename: Optional[str] = Field(default=None, description="Whatsapp media filename")
     body: Optional[str] = Field(default=None, description="Whatsapp message body")
-    preview_url: Optional[str] = Field(default=None, description="Whatsapp media preview url")
+    preview_url: Optional[bool] = Field(default=None, description="Whatsapp media preview url")
     message_id: Optional[str] = Field(default=None, description="Whatsapp message ID")
     emoji: Optional[str] = Field(default=None, description="Whatsapp emoji reaction")
 
 
+class InteractiveAction(BaseModel):
+    name: Optional[str] = Field(default=None, description="Whatsapp interactive action name")
+
+
+class InteractiveMessage(BaseModel):
+    type: Optional[str] = Field(
+        default=None,
+        description="Whatsapp interactive header type",
+        examples=["image", "video", "text", "document"]
+    )
+    text: str = Field(description="Whatsapp interactive text")
+    image: Optional[dict[str, str]] = Field(default=None, description="Whatsapp interactive image")
+
+
 class Interactive(BaseModel):
-    type: Optional[str] = Field(default=None, description="Whatsapp interactive mode")
+    type: str = Field(
+        description="Whatsapp interactive mode",
+        examples=["list", "cta_url", "flow", "button", "location_request_message"]
+    )
+    header: Optional[InteractiveMessage] = Field(
+        description="Header content. Supports the following types: document, image, text, video")
+    body: InteractiveMessage = Field(description="Message body text.")
+    footer: InteractiveMessage = Field(description="Message footer text.")
+
+    @field_validator("footer", "body")
+    def exclude_fields(cls, value: InteractiveMessage) -> InteractiveMessage:
+        if value.type is not None or value.image is not None:
+            raise ValueError(f"{value} ust only contain text, not type or image")
+        return value
 
 
-class MessageCompose(BaseModel):
+class Message(BaseModel):
+    messaging_product: str = Field(default="whatsapp", description="Whatsapp messaging product", examples=["whatsapp"])
+    status: Optional[str] = Field(default=None, description="Whatsapp messaging status")
+    message_id: Optional[str] = Field(default=None, description="Whatsapp messaging ID")
     content: Optional[str] = Field(default=None, description="Message content")
-    to: str = Field(description="Message to")
-    type: str = Field(default="text", description="Message type")
-    recipient_type: str = Field(default="individual", description="Message recipient type")
-    sender: str = Field(default="", description="Message sender")
+    to: Optional[str] = Field(default=None, description="Message to")
+    type: Optional[str] = Field(
+        default=None,
+        description="Message type",
+        examples=["text", "image", "video", "text", "document", "sticker", "reaction", "contact", "location"]
+    )
+    recipient_type: Optional[str] = Field(default=None, description="Message recipient type")
+    sender: Optional[str] = Field(default=None, description="Message sender")
     text: Optional[MessageTypeProperties] = Field(default=None, description="Whatsapp message text")
     audio: Optional[MessageTypeProperties] = Field(default=None, description="Whatsapp message audio")
     video: Optional[MessageTypeProperties] = Field(default=None, description="Whatsapp message video")
@@ -121,11 +163,3 @@ class MessageCompose(BaseModel):
     contact: Optional[list[Contact]] = Field(default=None, description="Whatsapp contact list")
     location: Optional[Location] = Field(default=None, description="Whatsapp message location")
 
-
-class Message(BaseModel):
-    id: Optional[str] = Field(default="", description="Message ID")
-    # data: dict[str, Any] = Field(description="Message data")
-    content: Optional[str] = Field(default="", description="Message content")
-    to: Optional[str] = Field(default="", description="Message to")
-    type: Optional[str] = Field(default="individual", description="Message type")
-    object: Optional[str] = Field(default="", description="Message object")
