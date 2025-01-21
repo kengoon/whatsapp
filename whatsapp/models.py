@@ -1,6 +1,6 @@
 from datetime import datetime
-from typing import Optional, Any
-from pydantic import BaseModel, Field, EmailStr, field_validator
+from typing import Optional
+from pydantic import BaseModel, Field, EmailStr, field_validator, FilePath, HttpUrl
 
 
 class WhatsappConfig(BaseModel):
@@ -8,6 +8,8 @@ class WhatsappConfig(BaseModel):
     phone_number_id: str = Field(description="phone numbers ID")
     verify_token: str = Field(description="Your whatsapp api verify token")
     version: str = Field(default="latest", description="Whatsapp API version")
+    api_url: HttpUrl = Field(description="Whatsapp API url")
+    headers: dict[str, str] = Field(description="Whatsapp API headers")
 
 
 class MessageResponseContact(BaseModel):
@@ -162,4 +164,19 @@ class Message(BaseModel):
     context: Optional[MessageTypeProperties] = Field(default=None, description="Whatsapp message reply context")
     contact: Optional[list[Contact]] = Field(default=None, description="Whatsapp contact list")
     location: Optional[Location] = Field(default=None, description="Whatsapp message location")
+
+
+class Media(BaseModel):
+    file: FilePath = Field(description="Path to an existing file")
+    type: str = Field(description="File mime type")
+
+
+class MediaResponse(BaseModel):
+    messaging_product: Optional[str] = Field(default=None)
+    url: Optional[str] = Field(default=None)
+    mime_type: Optional[str] = Field(default=None)
+    sha256: Optional[str] = Field(default=None)
+    file_size: Optional[int] = Field(default=None)
+    id: Optional[str] = Field(default=None)
+    success: Optional[bool] = Field(default=None)
 

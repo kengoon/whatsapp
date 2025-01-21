@@ -1,29 +1,13 @@
 from typing import Union
 from whatsapp.errors import Handle
-from whatsapp.model import Message, WhatsappConfig, MessageResponse, MessageTypeProperties, Location
-from bs4 import BeautifulSoup
+from whatsapp.models import Message, WhatsappConfig, MessageResponse, MessageTypeProperties, Location
 import requests
 
 
 class WhatsAppMessage:
     def __init__(self, config: WhatsappConfig):
         self.config = config
-        self._init_api_version()
-        self.url = f"https://graph.facebook.com/{self.version}/{self.config.phone_number_id}/messages"
-        self.headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.config.token}",
-        }
-
-    def _init_api_version(self):
-        if self.config.version == "latest":
-            r = requests.get("https://developers.facebook.com/docs/graph-api/changelog/")
-            soup = BeautifulSoup(r.text, features="html.parser")
-            tables = soup.findAll("table")
-            version = tables[0].find_all("tr")[0].find_all("td")[1].text
-            self.version = version
-        else:
-            self.version = self.config.version
+        self.url = "/messages"
 
     def reply_text(
             self,
@@ -31,7 +15,7 @@ class WhatsAppMessage:
             body: str,
             message_id: str,
             recipient_type: str = "individual",
-    ):
+    ) -> MessageResponse:
         message = Message(
             recipient_type=recipient_type,
             to=to,
@@ -39,14 +23,14 @@ class WhatsAppMessage:
             type="text",
             text=MessageTypeProperties(body=body),
         )
-        self.send_message(message)
+        return self.send_message(message)
 
-    def mark_as_read(self, message_id: str):
+    def mark_as_read(self, message_id: str) -> MessageResponse:
         message = Message(
             status="read",
             message_id=message_id,
         )
-        self.send_message(message)
+        return self.send_message(message)
 
     def send_text(
             self,
@@ -54,14 +38,14 @@ class WhatsAppMessage:
             body: str,
             recipient_type: str = "individual",
             preview_url: bool = True
-    ):
+    ) -> MessageResponse:
         message = Message(
             recipient_type=recipient_type,
             to=to,
             type="text",
             text=MessageTypeProperties(preview_url=preview_url, body=body),
         )
-        self.send_message(message)
+        return self.send_message(message)
 
     def send_video(
             self,
@@ -69,14 +53,14 @@ class WhatsAppMessage:
             media_id: str,
             caption: str = None,
             recipient_type: str = "individual",
-    ):
+    ) -> MessageResponse:
         message = Message(
             recipient_type=recipient_type,
             to=to,
             type="video",
             video=MessageTypeProperties(id=media_id, caption=caption)
         )
-        self.send_message(message)
+        return self.send_message(message)
 
     def send_image(
             self,
@@ -84,28 +68,28 @@ class WhatsAppMessage:
             media_id: str,
             caption: str = None,
             recipient_type: str = "individual",
-    ):
+    ) -> MessageResponse:
         message = Message(
             recipient_type=recipient_type,
             to=to,
             type="image",
             video=MessageTypeProperties(id=media_id, caption=caption)
         )
-        self.send_message(message)
+        return self.send_message(message)
 
     def send_audio(
             self,
             to: str,
             media_id: str,
             recipient_type: str = "individual",
-    ):
+    ) -> MessageResponse:
         message = Message(
             recipient_type=recipient_type,
             to=to,
             type="image",
             video=MessageTypeProperties(id=media_id)
         )
-        self.send_message(message)
+        return self.send_message(message)
 
     def send_document(
             self,
@@ -114,28 +98,28 @@ class WhatsAppMessage:
             caption: str = None,
             filename: str = None,
             recipient_type: str = "individual",
-    ):
+    ) -> MessageResponse:
         message = Message(
             recipient_type=recipient_type,
             to=to,
             type="document",
             video=MessageTypeProperties(id=media_id, caption=caption, filename=filename)
         )
-        self.send_message(message)
+        return self.send_message(message)
 
     def send_sticker(
             self,
             to: str,
             sticker_id: str,
             recipient_type: str = "individual",
-    ):
+    ) -> MessageResponse:
         message = Message(
             recipient_type=recipient_type,
             to=to,
             type="sticker",
             sticker=MessageTypeProperties(id=sticker_id)
         )
-        self.send_message(message)
+        return self.send_message(message)
 
     def send_contact(self, message: Message):
         pass
@@ -148,14 +132,14 @@ class WhatsAppMessage:
             name: str = None,
             address: str = None,
             recipient_type: str = "individual",
-    ):
+    ) -> MessageResponse:
         message = Message(
             recipient_type=recipient_type,
             to=to,
             type="location",
             location=Location(latitude=latitude, longitude=longitude, name=name, address=address)
         )
-        self.send_message(message)
+        return self.send_message(message)
 
     def react(
             self,
@@ -163,23 +147,23 @@ class WhatsAppMessage:
             message_id: str,
             emoji: str = None,
             recipient_type: str = "individual",
-    ):
+    ) -> MessageResponse:
         message = Message(
             recipient_type=recipient_type,
             to=to,
             type="reaction",
             reaction=MessageTypeProperties(message_id=message_id, emoji=emoji),
         )
-        self.send_message(message)
+        return self.send_message(message)
 
     def send_message(self, data: Union[dict[str, str], Message]) -> MessageResponse:
         if isinstance(data, Message):
             data = data.model_dump(exclude_none=True)
-        r = requests.post(self.url, headers=self.headers, json=data)
-        if r.status_code == 200:
-            return MessageResponse(**r.json())
-        Handle(r.json())
-
-
-
-WhatsAppMessage(WhatsappConfig(token="djd", verify_token="latest", phone_number_id="dkdkdk")).reply_text(context={"message_id": "nwa"}, to="3838383838", text={"body": "ddkdkdd"})
+        r = requests.post(
+            f"{self.config.api_url}/messages",
+            headers=self.config.headers | {"Content-Type": "application/json"},
+            json=data
+        )
+        if r.status_code != 200:
+            Handle(r.json())
+        return MessageResponse(**r.json())
