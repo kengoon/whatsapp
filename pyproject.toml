@@ -7,10 +7,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.13"
-pydantic = {extras = ["email-validators"], version = "^2.10.5"}
-email-validator = "^2.2.0"
-requests-toolbelt = "^1.0.0"
 beautifulsoup4 = "^4.12.3"
+pydantic = "^2.10.5"
+email-validator = "^2.2.0"
+requests = "^2.32.3"
 
 
 [build-system]
