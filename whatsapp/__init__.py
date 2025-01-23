@@ -6,10 +6,10 @@ from whatsapp.message import WhatsAppMessage
 from whatsapp.models import WhatsappConfig
 
 
-__all__ = ("Whatsapp", )
+__all__ = ("WhatsApp",)
 
 
-class Whatsapp:
+class WhatsApp:
     def __init__(self, token: str, phone_number_id: str, verify_token: str, version: str = "latest"):
         version = self._init_api_version(version)
         self.config = WhatsappConfig(
